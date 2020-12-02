@@ -32,7 +32,7 @@ How many passwords are valid according to their policies?
 
 (defn verify [[range character password]]
   (->> (get (frequencies password) character 0)
-       (#(and (<= (first range) %) (>= (second range) %)))))
+       (#(<= (first range) % (second range)))))
 
 (defn part-one []
   (->> (str/split (slurp "src/advent_of_code_2020/day2.input") #"\r\n")
@@ -73,4 +73,4 @@ How many passwords are valid according to the new interpretation of the policies
        (count)))
 
 ;; (part-two)
-;; => 419
+;; => 306
