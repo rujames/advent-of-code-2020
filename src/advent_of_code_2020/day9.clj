@@ -51,8 +51,6 @@ The first step of attacking the weakness in the XMAS data is to find the first n
 
 (def numbers (map read-string (str/split (slurp "src/advent_of_code_2020/day9.input") #"\r\n")))
 
-(map #(- (nth numbers 26) %) (take 25 numbers))
-
 (defn distinct-deficit [n x]
   (let [d (- n x)]
     (if (not= x d) d)))
