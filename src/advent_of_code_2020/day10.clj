@@ -156,22 +156,23 @@ What is the total number of distinct ways you can arrange the adapters to connec
 ;; Gaps of three form natural breaking points
 
 (defn partition-chain [chain n]
-  (loop [chain (rest chain)
-         current [0]
+  (loop [current [(first chain)]
+         chain (rest chain)
          groups []]
     (if (empty? chain) (conj groups current)
         (if (< (- (first chain) (last current)) n)
-          (recur (rest chain) (conj current (first chain)) groups)
-          (recur (rest chain) [(first chain)] (conj groups current))))))
+          (recur (conj current (first chain)) (rest chain) groups)
+          (recur [(first chain)] (rest chain) (conj groups current))))))
 
-;; Never more than 5 consecutive numbers on the given input, so can do these cases by hand
+;; (n-jolt-differences 2 chain) => 0, so after chunking by breaks of three every chunk is consecutive
 
-(defn count-ways-consecutive [c]
-  (let [n (count c)]
-    (cond
-      (<= n 2) 1
-      (= n 3) 2
-      (= n 4) 4
-      (= n 7) 5)))
+(defn count-ways-consecutive [n]
+  (cond
+    (<= n 2) 1
+    (= n 3) 2
+    (= n 4) 4
+    (= n 5) 7))
 
-;; Idea: decompose the chain into breaks of 3, then each of those parts into breaks of 2, then combine the results of count-ways-consecutive using the right maths
+;; (reduce * (map (comp count-ways-consecutive count) (partition-chain chain 3)))
+;; => 12089663946752
+
