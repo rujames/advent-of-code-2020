@@ -55,22 +55,10 @@ Figure out where the navigation instructions lead. What is the Manhattan distanc
   (mapv + position (mapv #(* dist %) direction)))
 
 (defn left [direction degrees]
-  (nth (iterate #(condp = %
-                    [1 0] [0 1]
-                    [0 1] [-1 0]
-                    [-1 0] [0 -1]
-                    [0 -1] [1 0])
-                 direction)
-        (quot degrees 90)))
+  (nth (iterate (fn [[x y]] [(* -1 y) x]) direction) (quot degrees 90)))
 
 (defn right [direction degrees]
-  (nth (iterate #(condp = %
-                    [1 0] [0 -1]
-                    [0 -1] [-1 0]
-                    [-1 0] [0 1]
-                    [0 1] [1 0])
-                 direction)
-       (quot degrees 90)))
+  (nth (iterate (fn [[x y]] [y (* -1 x)]) direction) (quot degrees 90)))
 
 (defn execute [[position direction] instruction]
   (let [[code & arg] instruction
@@ -93,3 +81,47 @@ Figure out where the navigation instructions lead. What is the Manhattan distanc
 ;; (manhattan (first (navigate instructions)))
 ;; => 415
 
+"
+--- Part Two ---
+Before you can give the destination to the captain, you realize that the actual action meanings were printed on the back of the instructions the whole time.
+
+Almost all of the actions indicate how to move a waypoint which is relative to the ship's position:
+
+Action N means to move the waypoint north by the given value.
+Action S means to move the waypoint south by the given value.
+Action E means to move the waypoint east by the given value.
+Action W means to move the waypoint west by the given value.
+Action L means to rotate the waypoint around the ship left (counter-clockwise) the given number of degrees.
+Action R means to rotate the waypoint around the ship right (clockwise) the given number of degrees.
+Action F means to move forward to the waypoint a number of times equal to the given value.
+The waypoint starts 10 units east and 1 unit north relative to the ship. The waypoint is relative to the ship; that is, if the ship moves, the waypoint moves with it.
+
+For example, using the same instructions as above:
+
+F10 moves the ship to the waypoint 10 times (a total of 100 units east and 10 units north), leaving the ship at east 100, north 10. The waypoint stays 10 units east and 1 unit north of the ship.
+N3 moves the waypoint 3 units north to 10 units east and 4 units north of the ship. The ship remains at east 100, north 10.
+F7 moves the ship to the waypoint 7 times (a total of 70 units east and 28 units north), leaving the ship at east 170, north 38. The waypoint stays 10 units east and 4 units north of the ship.
+R90 rotates the waypoint around the ship clockwise 90 degrees, moving it to 4 units east and 10 units south of the ship. The ship remains at east 170, north 38.
+F11 moves the ship to the waypoint 11 times (a total of 44 units east and 110 units south), leaving the ship at east 214, south 72. The waypoint stays 4 units east and 10 units south of the ship.
+After these operations, the ship's Manhattan distance from its starting position is 214 + 72 = 286.
+
+Figure out where the navigation instructions actually lead. What is the Manhattan distance between that location and the ship's starting position?
+"
+
+(defn execute-waypoint [[position waypoint] instruction]
+  (let [[code & arg] instruction
+        arg (read-string (apply str arg))]
+    (condp = code
+      \N [position (north waypoint arg)]
+      \E [position (east waypoint arg)]
+      \S [position (south waypoint arg)]
+      \W [position (west waypoint arg)]
+      \L [position (left waypoint arg)]
+      \R [position (right waypoint arg)]
+      \F [(forward position waypoint arg) waypoint])))
+
+(defn navigate-waypoint [instructions]
+  (reduce execute-waypoint [[0 0] [10 1]] instructions))
+
+;; (manhattan (first (navigate-waypoint instructions)))
+;; => 29401
