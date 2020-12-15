@@ -51,4 +51,41 @@ Your puzzle input is 1,0,18,10,19,6.
    spoken))
 
 ;; (first (nth (iterate next input) 2014))
+;; => 441
+
+"
+--- Part Two ---
+Impressed, the Elves issue you a challenge: determine the 30000000th number spoken. For example, given the same starting numbers as above:
+
+Given 0,3,6, the 30000000th number spoken is 175594.
+Given 1,3,2, the 30000000th number spoken is 2578.
+Given 2,1,3, the 30000000th number spoken is 3544142.
+Given 1,2,3, the 30000000th number spoken is 261214.
+Given 2,3,1, the 30000000th number spoken is 6895259.
+Given 3,2,1, the 30000000th number spoken is 18.
+Given 3,1,2, the 30000000th number spoken is 362.
+Given your starting numbers, what will be the 30000000th number spoken?
+"
+
+(def map-input {1 1
+                0 2
+                18 3
+                10 4
+                19 5
+                :last 6
+                :index 6})
+
+(defn next-map [spoken]
+  (if-let [previous-index (get spoken (:last spoken))]
+    (assoc spoken
+           (:last spoken) (:index spoken)
+           :last (- (:index spoken) previous-index)
+           :index (inc (:index spoken)))
+    (assoc spoken
+           (:last spoken) (:index spoken)
+           :last 0
+           :index (inc (:index spoken)))))
+
+;; (:last (nth (iterate next-map map-input) (- 30000000 6)))
+;; => 10613991
 
