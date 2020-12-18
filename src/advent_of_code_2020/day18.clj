@@ -43,10 +43,11 @@ Before you can help with the homework, you need to understand it yourself. Evalu
          remaining (rest s)
          unmatched 1]
     (if (zero? unmatched) [(apply str (drop-last contained)) (apply str remaining)]
-        (condp = (first remaining)
-          \( (recur (str contained (first remaining)) (rest remaining) (inc unmatched))
-          \) (recur (str contained (first remaining)) (rest remaining) (dec unmatched))
-          (recur (str contained (first remaining)) (rest remaining) unmatched)))))
+        (recur (str contained (first remaining)) (rest remaining)
+               (condp = (first remaining)
+                 \( (inc unmatched)
+                 \) (dec unmatched)
+                 unmatched)))))
 
 (defn step [left remaining]
   (let [[head & tail] remaining]
