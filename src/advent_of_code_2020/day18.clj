@@ -42,7 +42,6 @@ Before you can help with the homework, you need to understand it yourself. Evalu
   (loop [contained ""
          remaining (rest s)
          unmatched 1]
-    (println contained unmatched)
     (if (zero? unmatched) [(apply str (drop-last contained)) (apply str remaining)]
         (condp = (first remaining)
           \( (recur (str contained (first remaining)) (rest remaining) (inc unmatched))
@@ -69,3 +68,53 @@ Before you can help with the homework, you need to understand it yourself. Evalu
 
 ;; (reduce + (map eval-expr expressions))
 ;; => 67800526776934
+
+"
+--- Part Two ---
+You manage to answer the child's questions and they finish part 1 of their homework, but get stuck when they reach the next section: advanced math.
+
+Now, addition and multiplication have different precedence levels, but they're not the ones you're familiar with. Instead, addition is evaluated before multiplication.
+
+For example, the steps to evaluate the expression 1 + 2 * 3 + 4 * 5 + 6 are now as follows:
+
+1 + 2 * 3 + 4 * 5 + 6
+  3   * 3 + 4 * 5 + 6
+  3   *   7   * 5 + 6
+  3   *   7   *  11
+     21       *  11
+         231
+Here are the other examples from above:
+
+1 + (2 * 3) + (4 * (5 + 6)) still becomes 51.
+2 * 3 + (4 * 5) becomes 46.
+5 + (8 * 3 + 9 + 3 * 4 * 3) becomes 1445.
+5 * 9 * (7 * 3 * 3 + 9 * 3 + (8 + 6 * 4)) becomes 669060.
+((2 + 4 * 9) * (6 + 9 * 8 + 6) + 6) + 2 + 4 * 2 becomes 23340.
+What do you get if you add up the results of evaluating the homework problems using these new rules?
+"
+
+(defn build-tree [lhs unparsed]
+  (let [[head & tail] unparsed]
+    (cond
+      (#{\0 \1 \2 \3 \4 \5 \6 \7 \8 \9} head)
+      (if (and (= (first lhs) *) (seq tail) (= (first tail) \+))
+        (concat lhs `(~(build-tree `(identity ~(read-string (str head))) tail)))
+        (build-tree (concat lhs `(~(read-string (str head)))) tail))
+      (#{\+} head)
+      (build-tree `(~+ ~lhs) (apply str tail))
+      (#{\*} head)
+      (build-tree `(~* ~lhs) (apply str tail))
+      (#{\(} head)
+      (let [[expr tail] (match-bracket unparsed)
+            subtree (build-tree '(identity) expr)]
+        (if (and (= (first lhs) *) (seq tail) (= (first tail) \+))
+          (concat lhs `(~(build-tree subtree tail)))          
+          (build-tree (concat lhs `(~subtree)) tail)))
+      :else lhs)))
+
+(defn eval-expr-with-precedence [expr]
+  (eval (build-tree '(identity) expr)))
+
+;; (reduce + (map eval-expr-with-precedence expressions))
+;; => 340789638435483
+
