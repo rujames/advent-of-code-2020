@@ -98,7 +98,7 @@ What do you get if you add up the results of evaluating the homework problems us
     (cond
       (#{\0 \1 \2 \3 \4 \5 \6 \7 \8 \9} head)
       (if (and (= (first lhs) *) (seq tail) (= (first tail) \+))
-        (concat lhs `(~(build-tree `(identity ~(read-string (str head))) tail)))
+        (concat lhs `(~(build-tree (read-string (str head)) tail)))
         (build-tree (concat lhs `(~(read-string (str head)))) tail))
       (#{\+} head)
       (build-tree `(~+ ~lhs) (apply str tail))
