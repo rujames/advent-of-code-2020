@@ -180,21 +180,25 @@ Assemble the tiles into an image. What do you get if you multiply together the I
   (->> (str/split tile #"\r\n")
        (#(assoc {}
                 :id (re-find #"\d+" (first %))
+                :rows (rest %)
                 :edges (edges (rest %))))))
 
 (def tiles (map make-tile (str/split (slurp "src/advent_of_code_2020/day20.input") #"\r\n\r\n")))
 
 (defn flip-h [tile]
-  (let [[h1 h2 v1 v2] (:edges tile)]
-    (assoc tile :edges [(apply str (reverse h1)) (apply str (reverse h2)) v1 v2])))
+  (let [rows (map #(apply str (reverse %)) (:rows tile))]
+    (assoc tile
+           :rows rows
+           :edges (edges rows))))
 
 (defn flip-v [tile]
-  (let [[h1 h2 v1 v2] (:edges tile)]
-    (assoc tile :edges [h1 h2 (apply str (reverse v1)) (apply str (reverse v2))])))
+  (let [rows (transpose (map #(apply str (reverse %)) (transpose (:rows tile))))]
+    (assoc tile
+           :rows rows
+           :edges (edges rows))))
 
 (defn flip-hv [tile]
-  (let [[h1 h2 v1 v2] (:edges tile)]
-    (assoc tile :edges [(apply str (reverse h1)) (apply str (reverse h2)) (apply str (reverse v1)) (apply str (reverse v2))])))
+  (flip-v (flip-h tile)))
 
 (defn matches [tile edges]
   (some #(if (some edges (:edges %)) %)
@@ -206,3 +210,211 @@ Assemble the tiles into an image. What do you get if you multiply together the I
 ;; (reduce (fn [x t] (* x (read-string (:id t)))) 1 (filter #(= 3 (count (keep (fn [tile] (matches % (set (:edges tile)))) tiles))) tiles))
 ;; => 18411576553343
 
+"
+--- Part Two ---
+Now, you're ready to check the image for sea monsters.
+
+The borders of each tile are not part of the actual image; start by removing them.
+
+In the example above, the tiles become:
+
+.#.#..#. ##...#.# #..#####
+###....# .#....#. .#......
+##.##.## #.#.#..# #####...
+###.#### #...#.## ###.#..#
+##.#.... #.##.### #...#.##
+...##### ###.#... .#####.#
+....#..# ...##..# .#.###..
+.####... #..#.... .#......
+
+#..#.##. .#..###. #.##....
+#.####.. #.####.# .#.###..
+###.#.#. ..#.#### ##.#..##
+#.####.. ..##..## ######.#
+##..##.# ...#...# .#.#.#..
+...#..#. .#.#.##. .###.###
+.#.#.... #.##.#.. .###.##.
+###.#... #..#.##. ######..
+
+.#.#.### .##.##.# ..#.##..
+.####.## #.#...## #.#..#.#
+..#.#..# ..#.#.#. ####.###
+#..####. ..#.#.#. ###.###.
+#####..# ####...# ##....##
+#.##..#. .#...#.. ####...#
+.#.###.. ##..##.. ####.##.
+...###.. .##...#. ..#..###
+Remove the gaps to form the actual image:
+
+.#.#..#.##...#.##..#####
+###....#.#....#..#......
+##.##.###.#.#..######...
+###.#####...#.#####.#..#
+##.#....#.##.####...#.##
+...########.#....#####.#
+....#..#...##..#.#.###..
+.####...#..#.....#......
+#..#.##..#..###.#.##....
+#.####..#.####.#.#.###..
+###.#.#...#.######.#..##
+#.####....##..########.#
+##..##.#...#...#.#.#.#..
+...#..#..#.#.##..###.###
+.#.#....#.##.#...###.##.
+###.#...#..#.##.######..
+.#.#.###.##.##.#..#.##..
+.####.###.#...###.#..#.#
+..#.#..#..#.#.#.####.###
+#..####...#.#.#.###.###.
+#####..#####...###....##
+#.##..#..#...#..####...#
+.#.###..##..##..####.##.
+...###...##...#...#..###
+Now, you're ready to search for sea monsters! Because your image is monochrome, a sea monster will look like this:
+
+                  # 
+#    ##    ##    ###
+ #  #  #  #  #  #   
+When looking for this pattern in the image, the spaces can be anything; only the # need to match. Also, you might need to rotate or flip your image before it's oriented correctly to find sea monsters. In the above image, after flipping and rotating it to the appropriate orientation, there are two sea monsters (marked with O):
+
+.####...#####..#...###..
+#####..#..#.#.####..#.#.
+.#.#...#.###...#.##.O#..
+#.O.##.OO#.#.OO.##.OOO##
+..#O.#O#.O##O..O.#O##.##
+...#.#..##.##...#..#..##
+#.##.#..#.#..#..##.#.#..
+.###.##.....#...###.#...
+#.####.#.#....##.#..#.#.
+##...#..#....#..#...####
+..#.##...###..#.#####..#
+....#.##.#.#####....#...
+..##.##.###.....#.##..#.
+#...#...###..####....##.
+.#.##...#.##.#.#.###...#
+#.###.#..####...##..#...
+#.###...#.##...#.##O###.
+.O##.#OO.###OO##..OOO##.
+..O#.O..O..O.#O##O##.###
+#.#..##.########..#..##.
+#.#####..#.#...##..#....
+#....##..#.#########..##
+#...#.....#..##...###.##
+#..###....##.#...##.##.#
+Determine how rough the waters are in the sea monsters' habitat by counting the number of # that are not part of a sea monster. In the above example, the habitat's water roughness is 273.
+
+How many # are not part of a sea monster?
+"
+
+(def corners (filter #(= 3 (count (keep (fn [tile] (matches % (set (:edges tile)))) tiles))) tiles))
+
+(def top-left (some (fn [corner] (if (and (some #(matches % #{(nth (:edges corner) 1)}) (remove #{corner} tiles))
+                                          (some #(matches % #{(nth (:edges corner) 3)}) (remove #{corner} tiles)))
+                                   corner)) corners))
+
+(defn flip-h [tile]
+  (let [rows (map #(apply str (reverse %)) (:rows tile))]
+    (assoc tile
+           :rows rows
+           :edges (edges rows))))
+
+
+(defn rotate-east [tile]
+  (let [rows (transpose (map #(apply str (reverse %)) (:rows tile)))]
+    (assoc tile
+           :rows rows
+           :edges (edges rows))))
+
+(defn rotate-west [tile]
+  (let [rows (map #(apply str (reverse %)) (transpose (:rows tile)))]
+    (assoc tile
+           :rows rows
+           :edges (edges rows))))
+
+(defn fit-left
+  "Given a tile known to match the given edge, transform the tile so that the matching edge is on the left"
+  [tile edge]
+  (letfn [(matches-left [tile] (if (#{edge} (nth (:edges tile) 2)) tile))]
+    (or (matches-left tile)
+        (matches-left (rotate-east tile))
+        (matches-left (rotate-west tile))
+        (matches-left (flip-hv tile))
+        (matches-left (flip-v tile))
+        (matches-left (flip-v (rotate-east tile)))
+        (matches-left (flip-v (rotate-west tile)))
+        (matches-left (flip-h tile)))))
+
+(defn fit-top
+  "Given a tile known to match the given edge, transform the tile so that the matching edge is on the top"
+  [tile edge]
+  (letfn [(matches-top [tile] (if (#{edge} (nth (:edges tile) 0)) tile))]
+    (or (matches-top tile)
+        (matches-top (rotate-east tile))
+        (matches-top (rotate-west tile))
+        (matches-top (flip-hv tile))
+        (matches-top (flip-v tile))
+        (matches-top (flip-v (rotate-east tile)))
+        (matches-top (flip-v (rotate-west tile)))
+        (matches-top (flip-h tile)))))
+
+(def tiling
+  (loop [completed-rows []
+         unmatched-tiles (remove #{top-left} tiles)
+         current-row [top-left]
+         current-edge (nth (:edges (last current-row)) 3)]
+    (if-let [next-tile (fit-left (some #(matches % #{current-edge}) unmatched-tiles) current-edge)]
+      (recur completed-rows
+             (remove #(= (:id %) (:id next-tile)) unmatched-tiles)
+             (conj current-row next-tile)
+             (nth (:edges next-tile) 3))
+      (let [next-edge (nth (:edges (first current-row)) 1)]
+        (if-let [next-tile (fit-top (some #(matches % #{next-edge}) unmatched-tiles) next-edge)]
+          (recur (conj completed-rows current-row)
+                 (remove #(= (:id %) (:id next-tile)) unmatched-tiles)
+                 [next-tile]
+                 (nth (:edges next-tile) 3))
+          (conj completed-rows current-row))))))
+
+(defn interior [tile]
+  (map (comp #(apply str %) rest drop-last) (rest (drop-last (:rows tile)))))
+
+(def grid (mapcat (fn [row] (apply (partial map str) (map interior row))) tiling))
+
+(defn pattern-match [r1 r2 r3]
+  (count (filter #{true}
+                 (for [i (range (- (count r1) 19))]
+                   (letfn [(match-subrow [ns row] (every? #{\#} ((apply juxt (map (fn [n] #(nth % n)) ns)) row)))]
+                     (and (match-subrow [18] (subs r1 i))
+                          (match-subrow [0 5 6 11 12 17 18 19] (subs r2 i))
+                          (match-subrow [1 4 7 10 13 16] (subs r3 i))))))))
+
+(defn count-patterns [grid]
+  (reduce + (map pattern-match grid (rest grid) (rest (rest grid)))))
+
+(def grid-tile
+  "grid, but as a tile so that we can transform it without rewriting the transform functions"
+  {:id "grid"
+   :rows grid
+   :edges (edges grid)})
+
+(defn count-monsters
+  "Counts the number of matches of the monster pattern on the correctly transformed grid"
+  [grid-tile]
+  (letfn [(return-if [tile] (let [monsters (count-patterns (:rows tile))] (if (> monsters 0) monsters)))]
+    (or (return-if grid-tile)
+        (return-if (rotate-east grid-tile))
+        (return-if (rotate-west grid-tile))
+        (return-if (flip-hv grid-tile))
+        (return-if (flip-v grid-tile))
+        (return-if (flip-v (rotate-east grid-tile)))
+        (return-if (flip-v (rotate-west grid-tile)))
+        (return-if (flip-h grid-tile)))))
+
+;; (count-monsters grid-tile)
+;; => 43
+
+;; (reduce + (map #(count (filter #{\#} %)) grid))
+;; => 2647
+
+;; (- 2647 (* 15 43))
+;; => 2002
