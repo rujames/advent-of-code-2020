@@ -185,27 +185,27 @@ Assemble the tiles into an image. What do you get if you multiply together the I
 
 (def tiles (map make-tile (str/split (slurp "src/advent_of_code_2020/day20.input") #"\r\n\r\n")))
 
-(defn flip-h [tile]
-  (let [rows (map #(apply str (reverse %)) (:rows tile))]
+(defn transform [tile f]
+  (let [rows (f (:rows tile))]
     (assoc tile
            :rows rows
            :edges (edges rows))))
 
-(defn flip-v [tile]
-  (let [rows (transpose (map #(apply str (reverse %)) (transpose (:rows tile))))]
-    (assoc tile
-           :rows rows
-           :edges (edges rows))))
+(defn flip-h [rows]
+  (map #(apply str (reverse %)) rows))
 
-(defn flip-hv [tile]
-  (flip-v (flip-h tile)))
+(defn flip-v [rows]
+  (transpose (map #(apply str (reverse %)) (transpose rows))))
+
+(defn flip-hv [rows]
+  (flip-v (flip-h rows)))
 
 (defn matches [tile edges]
-  (some #(if (some edges (:edges %)) %)
-        [tile
-         (flip-h tile)
-         (flip-v tile)
-         (flip-hv tile)]))
+  (some #(let [tile (transform tile %)] (if (some edges (:edges tile)) tile))
+        [identity
+         flip-h
+         flip-v
+         flip-hv]))
 
 ;; (reduce (fn [x t] (* x (read-string (:id t)))) 1 (filter #(= 3 (count (keep (fn [tile] (matches % (set (:edges tile)))) tiles))) tiles))
 ;; => 18411576553343
@@ -312,63 +312,36 @@ How many # are not part of a sea monster?
                                           (some #(matches % #{(nth (:edges corner) 3)}) (remove #{corner} tiles)))
                                    corner)) corners))
 
-(defn flip-h [tile]
-  (let [rows (map #(apply str (reverse %)) (:rows tile))]
-    (assoc tile
-           :rows rows
-           :edges (edges rows))))
+(defn rotate-east [rows]
+  (transpose (map #(apply str (reverse %)) rows)))
 
+(defn rotate-west [rows]
+  (map #(apply str (reverse %)) (transpose rows)))
 
-(defn rotate-east [tile]
-  (let [rows (transpose (map #(apply str (reverse %)) (:rows tile)))]
-    (assoc tile
-           :rows rows
-           :edges (edges rows))))
-
-(defn rotate-west [tile]
-  (let [rows (map #(apply str (reverse %)) (transpose (:rows tile)))]
-    (assoc tile
-           :rows rows
-           :edges (edges rows))))
-
-(defn fit-left
-  "Given a tile known to match the given edge, transform the tile so that the matching edge is on the left"
-  [tile edge]
-  (letfn [(matches-left [tile] (if (#{edge} (nth (:edges tile) 2)) tile))]
-    (or (matches-left tile)
-        (matches-left (rotate-east tile))
-        (matches-left (rotate-west tile))
-        (matches-left (flip-hv tile))
-        (matches-left (flip-v tile))
-        (matches-left (flip-v (rotate-east tile)))
-        (matches-left (flip-v (rotate-west tile)))
-        (matches-left (flip-h tile)))))
-
-(defn fit-top
-  "Given a tile known to match the given edge, transform the tile so that the matching edge is on the top"
-  [tile edge]
-  (letfn [(matches-top [tile] (if (#{edge} (nth (:edges tile) 0)) tile))]
-    (or (matches-top tile)
-        (matches-top (rotate-east tile))
-        (matches-top (rotate-west tile))
-        (matches-top (flip-hv tile))
-        (matches-top (flip-v tile))
-        (matches-top (flip-v (rotate-east tile)))
-        (matches-top (flip-v (rotate-west tile)))
-        (matches-top (flip-h tile)))))
+(defn fit-side
+  [side tile edge]
+  (letfn [(matches-side [tile] (if (#{edge} (nth (:edges tile) (condp = side :top 0 :left 2))) tile))]
+    (or (matches-side tile)
+        (matches-side (transform tile rotate-east))
+        (matches-side (transform tile rotate-west))
+        (matches-side (transform tile flip-hv))
+        (matches-side (transform tile flip-v))
+        (matches-side (transform tile (comp flip-v rotate-east)))
+        (matches-side (transform tile (comp flip-v rotate-west)))
+        (matches-side (transform tile flip-h)))))
 
 (def tiling
   (loop [completed-rows []
          unmatched-tiles (remove #{top-left} tiles)
          current-row [top-left]
          current-edge (nth (:edges (last current-row)) 3)]
-    (if-let [next-tile (fit-left (some #(matches % #{current-edge}) unmatched-tiles) current-edge)]
+    (if-let [next-tile (fit-side :left (some #(matches % #{current-edge}) unmatched-tiles) current-edge)]
       (recur completed-rows
              (remove #(= (:id %) (:id next-tile)) unmatched-tiles)
              (conj current-row next-tile)
              (nth (:edges next-tile) 3))
       (let [next-edge (nth (:edges (first current-row)) 1)]
-        (if-let [next-tile (fit-top (some #(matches % #{next-edge}) unmatched-tiles) next-edge)]
+        (if-let [next-tile (fit-side :top (some #(matches % #{next-edge}) unmatched-tiles) next-edge)]
           (recur (conj completed-rows current-row)
                  (remove #(= (:id %) (:id next-tile)) unmatched-tiles)
                  [next-tile]
@@ -391,26 +364,19 @@ How many # are not part of a sea monster?
 (defn count-patterns [grid]
   (reduce + (map pattern-match grid (rest grid) (rest (rest grid)))))
 
-(def grid-tile
-  "grid, but as a tile so that we can transform it without rewriting the transform functions"
-  {:id "grid"
-   :rows grid
-   :edges (edges grid)})
-
 (defn count-monsters
-  "Counts the number of matches of the monster pattern on the correctly transformed grid"
-  [grid-tile]
-  (letfn [(return-if [tile] (let [monsters (count-patterns (:rows tile))] (if (> monsters 0) monsters)))]
-    (or (return-if grid-tile)
-        (return-if (rotate-east grid-tile))
-        (return-if (rotate-west grid-tile))
-        (return-if (flip-hv grid-tile))
-        (return-if (flip-v grid-tile))
-        (return-if (flip-v (rotate-east grid-tile)))
-        (return-if (flip-v (rotate-west grid-tile)))
-        (return-if (flip-h grid-tile)))))
+  [grid]
+  (letfn [(return-if [grid] (let [monsters (count-patterns grid)] (if (> monsters 0) monsters)))]
+    (or (return-if grid)
+        (return-if (rotate-east grid))
+        (return-if (rotate-west grid))
+        (return-if (flip-hv grid))
+        (return-if (flip-v grid))
+        (return-if (flip-v (rotate-east grid)))
+        (return-if (flip-v (rotate-west grid)))
+        (return-if (flip-h grid)))))
 
-;; (count-monsters grid-tile)
+;; (count-monsters grid)
 ;; => 43
 
 ;; (reduce + (map #(count (filter #{\#} %)) grid))
