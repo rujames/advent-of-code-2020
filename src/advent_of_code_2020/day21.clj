@@ -38,14 +38,48 @@ Determine which ingredients cannot possibly contain any of the allergens in your
 
 (def allergens (apply set/union (map (comp set :allergens) foods)))
 
-(defn ingredients-by-allergen [foods]
+(defn ingredients-with-allergen [foods]
   (letfn [(intersect-ingredients [ingredients food] (set/intersection ingredients (:ingredients food)))]
     (set (mapcat (fn [a]
                    (let [foods-with-allergen (filter #(some #{a} (:allergens %)) foods)]
                      (reduce intersect-ingredients (:ingredients (first foods-with-allergen)) foods-with-allergen)))
                  allergens))))
 
-(def safe-ingredients (set/difference ingredients (ingredients-by-allergen foods)))
+(def safe-ingredients (set/difference ingredients (ingredients-with-allergen foods)))
 
 ;; (reduce + (map (fn [food] (count (set/intersection safe-ingredients (:ingredients food)))) foods))
 ;; => 2493
+
+"
+--- Part Two ---
+Now that you've isolated the inert ingredients, you should have enough information to figure out which ingredient contains which allergen.
+
+In the above example:
+
+mxmxvkd contains dairy.
+sqjhc contains fish.
+fvjkl contains soy.
+Arrange the ingredients alphabetically by their allergen and separate them by commas to produce your canonical dangerous ingredient list. (There should not be any spaces in your canonical dangerous ingredient list.) In the above example, this would be mxmxvkd,sqjhc,fvjkl.
+
+Time to stock your raft with supplies. What is your canonical dangerous ingredient list?
+"
+
+(defn ingredients-by-allergen [foods]
+  (letfn [(intersect-ingredients [ingredients food] (set/intersection ingredients (:ingredients food)))]
+    (into {} (map (fn [a]
+                    (let [foods-with-allergen (filter #(some #{a} (:allergens %)) foods)]
+                      [a (reduce intersect-ingredients (:ingredients (first foods-with-allergen)) foods-with-allergen)]))
+                  allergens))))
+
+;; (ingredients-by-allergen foods)
+;; =>
+;; {"eggs" #{"jxx"},
+;;  "sesame" #{"tsnkknk" "dklgl"},
+;;  "peanuts" #{"dklgl" "pmvfzk" "zzt"},
+;;  "wheat" #{"tlgrhdh" "tsnkknk" "pmvfzk"},
+;;  "dairy" #{"kqv" "zzt"},
+;;  "shellfish" #{"kqv" "tsnkknk" "qdlpbt" "pmvfzk"},
+;;  "nuts" #{"dklgl" "zzt"},
+;;  "fish" #{"jxx" "zzt"}}
+
+;; Solution: kqv,jxx,zzt,dklgl,pmvfzk,tsnkknk,qdlpbt,tlgrhdh
