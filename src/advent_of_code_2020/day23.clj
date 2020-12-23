@@ -100,3 +100,51 @@ Your puzzle input is 167248359.
 ;; (nth (iterate (move 9) '(1 6 7 2 4 8 3 5 9)) 1)
 ;; => (6 2 4 9 1 3 8 7 5)
 
+"
+--- Part Two ---
+Due to what you can only assume is a mistranslation (you're not exactly fluent in Crab), you are quite surprised when the crab starts arranging many cups in a circle on your raft - one million (1000000) in total.
+
+Your labeling is still correct for the first few cups; after that, the remaining cups are just numbered in an increasing fashion starting from the number after the highest number in your list and proceeding one by one until one million is reached. (For example, if your labeling were 54321, the cups would be numbered 5, 4, 3, 2, 1, and then start counting up from 6 until one million is reached.) In this way, every number from one through one million is used exactly once.
+
+After discovering where you made the mistake in translating Crab Numbers, you realize the small crab isn't going to do merely 100 moves; the crab is going to do ten million (10000000) moves!
+
+The crab is going to hide your stars - one each - under the two cups that will end up immediately clockwise of cup 1. You can have them if you predict what the labels on those cups will be when the crab is finished.
+
+In the above example (389125467), this would be 934001 and then 159792; multiplying these together produces 149245887792.
+
+Determine which two cups will end up immediately clockwise of cup 1. What do you get if you multiply their labels together?
+"
+
+(defn input-array [] (int-array (concat '(0 6 4 5 8 9 7 2 3) (range 10 1000001) '(1))))
+
+(defn pick-up [cups current]
+  (let [chain (take 4 (rest (iterate (fn [n] (aget cups n)) current)))]
+    (aset cups current (last chain))
+    (take 3 chain)))
+
+(defn destination [cups hand current]
+  (let [largest (dec (alength cups))
+        to-check (map #(inc (mod (dec %) largest)) (range (dec current) (- largest) -1))]
+    (some #(if (not ((set hand) %)) %) to-check)))
+
+(defn replace [cups hand destination]
+  (let [[f s t] hand
+        next (aget cups destination)]
+    (doto cups
+      (aset destination f)
+      (aset f s)
+      (aset s t)
+      (aset t next))))
+
+(defn move [cups current]
+  (let [hand (pick-up cups current)
+        dest (destination cups hand current)
+        next (replace cups hand dest)]
+    [next (aget next current)]))
+
+(defn part-two []
+  (let [[shuffled _] (nth (iterate #(apply move %) [(input-array) 1]) 10000000)]
+    (* (aget shuffled 1) (aget shuffled (aget shuffled 1)))))
+
+;; (part-two)
+;; => 21986479838
