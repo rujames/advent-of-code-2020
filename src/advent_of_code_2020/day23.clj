@@ -78,23 +78,25 @@ Your puzzle input is 167248359.
 "
 
 (defn rotate [cups n]
-  (into [] (concat (subvec cups n) (subvec cups 0 n))))
+  (concat (drop n cups) (take n cups)))
 
 (defn pick-up [cups]
-  [(into [] (concat [(first cups)] (subvec cups 4))) (subvec cups 1 4)])
+  [(concat `(~(first cups)) (drop 4 cups)) (take 3 (rest cups))])
 
-(defn destination [cups]
-  (let [to-check (rotate (vec (range 9 0 -1)) (- 10 (first cups)))]
-    (some (set cups) to-check)))
+(defn destination [remaining removed max-size]
+  (let [to-check (rotate (range max-size 0 -1) (- (inc max-size) (first remaining)))
+        predicate #(not ((set removed) %))]
+    (some #(if (predicate %) %) to-check)))
 
 (defn put-back [cups removed index]
-  (into [] (concat (subvec cups 0 (inc index)) removed (subvec cups (inc index)))))
+  (concat (take (inc index) cups) removed (drop (inc index) cups)))
 
-(defn move [cups]
-  (let [[remaining removed] (pick-up cups)
-        index (.indexOf remaining (destination remaining))]
-    (rotate (put-back remaining removed index) 1)))
+(defn move [max-size]
+  (fn [cups]
+    (let [[remaining removed] (pick-up cups)
+          index (.indexOf remaining (destination remaining removed max-size))]
+      (rotate (put-back remaining removed index) 1))))
 
-;; (nth (iterate move [1 6 7 2 4 8 3 5 9]) 100)
-;; => [6 2 4 9 1 3 8 7 5]
+;; (nth (iterate (move 9) '(1 6 7 2 4 8 3 5 9)) 1)
+;; => (6 2 4 9 1 3 8 7 5)
 
