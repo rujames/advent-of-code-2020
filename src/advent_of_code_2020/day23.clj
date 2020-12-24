@@ -148,3 +148,5 @@ Determine which two cups will end up immediately clockwise of cup 1. What do you
 
 ;; (part-two)
 ;; => 21986479838
+
+(part-two)
