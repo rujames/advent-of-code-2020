@@ -117,18 +117,18 @@ Determine which two cups will end up immediately clockwise of cup 1. What do you
 
 (defn input-array [] (int-array (concat '(0 6 4 5 8 9 7 2 3) (range 10 1000001) '(1))))
 
-(defn pick-up [cups current]
+(defn pick-up [^"[I" cups current]
   (let [chain (take 4 (rest (iterate (fn [n] (aget cups n)) current)))]
-    (aset cups current (last chain))
+    (aset cups current (int (last chain)))
     (take 3 chain)))
 
-(defn destination [cups hand current]
+(defn destination [^"[I" cups hand current]
   (let [largest (dec (alength cups))
         to-check (map #(inc (mod (dec %) largest)) (range (dec current) (- largest) -1))]
     (some #(if (not ((set hand) %)) %) to-check)))
 
-(defn replace [cups hand destination]
-  (let [[f s t] hand
+(defn replace [^"[I" cups hand destination]
+  (let [[^int f ^int s ^int t] hand
         next (aget cups destination)]
     (doto cups
       (aset destination f)
@@ -136,14 +136,14 @@ Determine which two cups will end up immediately clockwise of cup 1. What do you
       (aset s t)
       (aset t next))))
 
-(defn move [cups current]
+(defn move [^"[I" cups current]
   (let [hand (pick-up cups current)
         dest (destination cups hand current)
         next (replace cups hand dest)]
-    [next (aget next current)]))
+    [cups (aget cups current)]))
 
 (defn part-two []
-  (let [[shuffled _] (nth (iterate #(apply move %) [(input-array) 1]) 10000000)]
+  (let [[^"[I" shuffled _] (nth (iterate #(apply move %) [(input-array) 1]) 10000000)]
     (* (aget shuffled 1) (aget shuffled (aget shuffled 1)))))
 
 ;; (part-two)
